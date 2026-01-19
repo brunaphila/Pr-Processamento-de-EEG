@@ -1,0 +1,46 @@
+% Script: aplicar_filtro_CAR_em_lote.m
+% Aplica filtro CAR em todos os arquivos .set/.fdt de uma pasta
+
+% 1. Caminhos
+pasta_origem = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\dados_concatenados_removido';
+pasta_destino = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\CAR geral';
+
+% Garante que a pasta de destino exista
+if ~exist(pasta_destino, 'dir')
+    mkdir(pasta_destino);
+    fprintf('📁 Pasta de destino criada: %s\n', pasta_destino);
+end
+
+% 2. Lista todos os arquivos .set na pasta de origem
+arquivos_set = dir(fullfile(pasta_origem, '*.set'));
+
+if isempty(arquivos_set)
+    error('Nenhum arquivo .set encontrado na pasta de origem.');
+end
+
+fprintf('🔄 Iniciando processamento de %d arquivos...\n', length(arquivos_set));
+
+% 3. Loop por todos os arquivos
+for i = 1:length(arquivos_set)
+    nome_arquivo = arquivos_set(i).name;
+    fprintf('\n➡️  Processando: %s\n', nome_arquivo);
+    
+    % Carrega o EEG
+    EEG = pop_loadset('filename', nome_arquivo, 'filepath', pasta_origem);
+    
+    % Aplica o filtro CAR: subtrai a média entre canais em cada amostra
+    EEG.data = EEG.data - mean(EEG.data, 1);
+    
+    % Adiciona histórico do processamento
+    EEG = eeg_hist(EEG, 'Filtro CAR (Common Average Reference) aplicado');
+    
+    % Define novo nome do arquivo
+    [~, nome_base, ~] = fileparts(nome_arquivo);
+    nome_novo = [nome_base, '_CAR.set'];
+    
+    % Salva o novo arquivo
+    pop_saveset(EEG, 'filename', nome_novo, 'filepath', pasta_destino);
+    fprintf('✅ Arquivo salvo: %s\n', fullfile(pasta_destino, nome_novo));
+end
+
+fprintf('\n🏁 Filtro CAR aplicado em todos os arquivos.\n');
