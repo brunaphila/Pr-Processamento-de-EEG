@@ -6,7 +6,7 @@ A sequência abaixo reflete o fluxo real de preparação dos dados para análise
 
 ---
 
-## Visão geral do pipeline
+## Visão geral:
 
 1. **Conversão Open Ephys**: `.continuous` → `.mat` (registro inteiro por canal)
 2. **Correção do Protocolo C**: padronização/correção da planilha/estrutura de protocolo usada como referência para cortes
