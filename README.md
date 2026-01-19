@@ -45,7 +45,7 @@ O Protocolo C utiliza horários (início/fim) de cada trial para localizar trech
 ## 3) Cortes do Protocolo C (segmentação por trial)
 
 ### Script
-- `corte_protC.m`
+- `cortes_protC.m`
 
 ### O que essa etapa faz
 Para cada voluntário, carrega o EEG contínuo (`data` 32×N) e recorta os trechos correspondentes aos trials do Protocolo C a partir da referência `ProtC_completo_CORRIGIDO.mat`.  
@@ -60,7 +60,7 @@ Gera cortes separados para:
 ## 4) Concatenação dos 3 cortes (Prot. A e B) para viabilizar ICA
 
 ### Script
-- `concatenar_3_cortes.m`
+- `concatenação_3_sinais.m`
 
 ### Motivação
 Os sinais completos eram grandes demais para execução do ICA diretamente. Por isso, foram gerados **3 cortes** e, após a etapa de ICA, esses cortes foram **concatenados** no tempo para reconstruir um sinal contínuo (por canal) mantendo a sequência analisada.
@@ -118,7 +118,7 @@ Essa estrutura foi utilizada como entrada direta para a análise de PSD em Pytho
 ## 8) PSD (Welch) — etapa final
 
 ### Script
-- `psd_mat.py`
+- `psd_arq_mat.py`
 
 ### O que essa etapa faz
 Lê os `.mat` exportados do EEGLAB e calcula a **PSD por Welch** para cada canal:
@@ -151,12 +151,12 @@ Lê os `.mat` exportados do EEGLAB e calcula a **PSD por Welch** para cada canal
 
 1. `continuous_para_mat_arq_inteiro.m` (usa `load_open_ephys_data_faster.m`)
 2. (Protocolo C) usar `ProtC_completo_CORRIGIDO.mat`
-3. `corte_prot_C_execucao.m`
-4. (Prot. A/B) `concatenar_3_cortes_um_por_vez.m` (quando aplicável)
+3. `cortes_ProtC.m`
+4. (Prot. A/B) `concatenação_3_sinais.m` (quando aplicável)
 5. `filtro_CAR_especifico.m` e/ou `filtro_CAR_geral.m`
 6. `filtro_pos_ICA_2_50_todos_os_arquivos.m`
 7. `set_para_mat.m`
-8. `analise_psd_mat.py`
+8. `PSD_arq_mat.py`
 
 ---
 
