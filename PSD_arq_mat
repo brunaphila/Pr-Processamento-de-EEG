@@ -1,0 +1,99 @@
+import numpy as np
+from scipy import signal
+import scipy.io as sio
+import os
+
+def analisar_psd_welch(caminho_arquivo_mat):
+    """
+    Carrega um arquivo .mat e realiza a análise de PSD de Welch para cada canal.
+
+    Args:
+        caminho_arquivo_mat (str): O caminho completo para o arquivo .mat.
+
+    Returns:
+        dict: Um dicionário contendo os resultados da análise:
+              - 'freqs': O vetor de frequências.
+              - 'psds': Uma matriz com as PSDs para cada canal.
+              - 'srate': A frequência de amostragem.
+              - 'chan_labels': Uma lista com os nomes dos canais.
+    """
+    try:
+        mat_data = sio.loadmat(caminho_arquivo_mat)
+
+        eeg_data = mat_data['eeg_data']
+        srate = mat_data['srate'][0, 0]
+        chanlocs = mat_data['chanlocs']
+        
+        chan_labels = [chanlocs[0, i][0][0] for i in range(chanlocs.shape[1])]
+        
+        print(f"Processando arquivo: {os.path.basename(caminho_arquivo_mat)}")
+        print(f"Taxa de amostragem: {srate} Hz")
+        print(f"Número de canais: {eeg_data.shape[0]}")
+        
+    except FileNotFoundError:
+        print(f"Erro: O arquivo não foi encontrado em {caminho_arquivo_mat}")
+        return None
+    except KeyError as e:
+        print(f"Erro: O arquivo .mat não contém a chave esperada: {e}")
+        return None
+
+    nperseg = int(srate) * 2
+    
+    psd_channels = []
+    for i in range(eeg_data.shape[0]):
+        channel_signal = eeg_data[i, :]
+        freqs, psd = signal.welch(
+            channel_signal,
+            fs=srate,
+            nperseg=nperseg,
+            noverlap=nperseg // 2,
+            window='hamming'
+        )
+        psd_channels.append(psd)
+
+    psd_channels = np.array(psd_channels)
+
+    return {
+        'freqs': freqs,
+        'psds': psd_channels,
+        'srate': srate,
+        'chan_labels': chan_labels
+    }
+
+# --- Exemplo de como usar a função ---
+if __name__ == '__main__':
+    # --- AJUSTE ESTES CAMINHOS ---
+    caminho_origem = r'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\set_para_mat_geral'
+    caminho_destino = r'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\PSD geral'
+
+    if not os.path.exists(caminho_destino):
+        os.makedirs(caminho_destino)
+        print(f"Pasta de destino criada: {caminho_destino}")
+
+    arquivos_mat = [f for f in os.listdir(caminho_origem) if f.endswith('.mat')]
+    
+    if not arquivos_mat:
+        print("Nenhum arquivo .mat encontrado na pasta de origem.")
+    else:
+        for arquivo in arquivos_mat:
+            caminho_completo_origem = os.path.join(caminho_origem, arquivo)
+            
+            resultados = analisar_psd_welch(caminho_completo_origem)
+            
+            if resultados:
+                # Cria o caminho do arquivo de saída com a extensão .mat
+                nome_base = os.path.splitext(arquivo)[0]
+                caminho_saida = os.path.join(caminho_destino, f'{nome_base}_psd.mat')
+
+                # Cria um dicionário no formato que o MATLAB espera
+                # onde cada chave será uma variável dentro do arquivo .mat
+                dados_para_mat = {
+                    'freqs': resultados['freqs'],
+                    'psds': resultados['psds'],
+                    'srate': resultados['srate'],
+                    'chan_labels': resultados['chan_labels']
+                }
+
+                # Salva os resultados no novo arquivo .mat
+                sio.savemat(caminho_saida, dados_para_mat)
+                print(f"Resultados da PSD salvos em: {caminho_saida}\n")
