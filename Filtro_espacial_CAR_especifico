@@ -1,126 +1,67 @@
-% Caminho dos arquivos .mat de EEG (dados já organizados)
-base_dir_mat = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\dados_para_corte';
+% Script: aplicar_filtro_CAR_em_lote.m
+% Aplica filtro CAR apenas nos canais C3, Cz e C4
 
-% Caminho do arquivo ProtC_completo_certo.mat
-protC_path = 'C:\Users\Bruna\Documents\IC\codigos_matlab';
+% 1. Caminhos
+pasta_origem = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\dados_concatenados_removido';
+pasta_destino = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\CAR especifico';
 
-% Só para obter o tempo zero do EEG:
-inicios = {
-    %'2019-01-09_12-29-50'
-    %'2019-01-11_09-11-56'
-    %'2019-01-14_19-54-43'
-    %'2019-01-17_11-50-34'
-    %'2019-01-18_12-24-05'
-    %'2019-01-23_11-13-47'
-    %'2019-02-04_11-54-15'
-    '2019-02-07_09-03-52'
-};
-%ids = [8 11 14 20 22 30 41 44];
-ids = [44];
-
-% Carregando o arquivo do protocolo C na pasta correta
-load(fullfile(protC_path, 'ProtC_completo_CORRIGIDO.mat')); % Deve carregar ProtC (ou ProtC_completo)
-
-Fs = 1000; % ajuste se diferente
-
-for i = 1:length(ids)
-    id = ids(i);
-    inicio_str = inicios{i};
-    dt_format = 'yyyy-MM-dd_HH-mm-ss';
-    dt_inicio = datetime(inicio_str, 'InputFormat', dt_format);
-
-    % Carrega o arquivo .mat de EEG desse participante
-    eeg_file = fullfile(base_dir_mat, sprintf('ID%02d_ProtC.mat', id));
-    if ~exist(eeg_file, 'file')
-        warning('Arquivo %s não encontrado para participante %d', eeg_file, id);
-        continue
-    end
-    load(eeg_file, 'data'); % Carrega matriz 32 x N
-
-    N = size(data, 2);
-    tempo_eeg = (0:N-1)/Fs;
-
-    % --- CORTES DE EXPLORAÇÃO ---
-    cel1 = ProtC{9,1};  % Caso a variável esteja com nome diferente, ajuste aqui!
-    out_dir = fullfile(base_dir_mat, sprintf('cortes_exploracao_ID%02d', id));
-    if ~exist(out_dir, 'dir'), mkdir(out_dir); end
-
-    for t = 1:18
-        dt_trial_ini = datetime(cel1{t,5}, 'InputFormat', 'dd-MMM-yyyy HH:mm:ss');
-        dt_trial_fim = datetime(cel1{t,6}, 'InputFormat', 'dd-MMM-yyyy HH:mm:ss');
-
-        tempo_inicio = seconds(dt_trial_ini - dt_inicio);
-        tempo_fim = seconds(dt_trial_fim - dt_inicio);
-
-        ind_ini = find(tempo_eeg >= tempo_inicio, 1, 'first');
-        ind_fim = find(tempo_eeg <= tempo_fim, 1, 'last');
-        if isempty(ind_ini) || isempty(ind_fim)
-            warning('Trial %d fora dos limites para participante %d (exploração)', t, id);
-            fprintf('   tempo_inicio: %.1f s\n   tempo_fim: %.1f s\n   EEG: [%.1f : %.1f] s\n\n', ...
-                tempo_inicio, tempo_fim, tempo_eeg(1), tempo_eeg(end));
-            disp(dt_trial_ini);
-            disp(dt_inicio);
-            disp(dt_trial_fim);
-            continue
-        end
-
-        corte = data(:, ind_ini:ind_fim);
-        corte_tempo = tempo_eeg(ind_ini:ind_fim);
-
-        corte_struct.corte = corte;
-        corte_struct.tempo = corte_tempo;
-        corte_struct.trial = t;
-        corte_struct.id = id;
-        corte_struct.tempo_inicio = tempo_inicio;
-        corte_struct.tempo_fim = tempo_fim;
-        corte_struct.inicio_str = cel1{t,5};
-        corte_struct.fim_str = cel1{t,6};
-        corte_struct.duracao_str = cel1{t,8};
-
-        nome_saida = sprintf('EEGexploracao_ID%02d_trial%02d_%ds_%ds.mat', id, t, round(tempo_inicio), round(tempo_fim));
-        save(fullfile(out_dir, nome_saida), 'corte_struct', '-v7.3');
-    end
-
-    % --- CORTES DE EXECUÇÃO ---
-    cel2 = ProtC{9,2};
-    out_dir2 = fullfile(base_dir_mat, sprintf('cortes_execucao_ID%02d', id));
-    if ~exist(out_dir2, 'dir'), mkdir(out_dir2); end
-
-    for t = 1:18
-        dt_trial_ini = datetime(cel2{t,11}, 'InputFormat', 'dd-MMM-yyyy HH:mm:ss');
-        dt_trial_fim = datetime(cel2{t,12}, 'InputFormat', 'dd-MMM-yyyy HH:mm:ss');
-
-        tempo_inicio = seconds(dt_trial_ini - dt_inicio);
-        tempo_fim = seconds(dt_trial_fim - dt_inicio);
-
-        ind_ini = find(tempo_eeg >= tempo_inicio, 1, 'first');
-        ind_fim = find(tempo_eeg <= tempo_fim, 1, 'last');
-        if isempty(ind_ini) || isempty(ind_fim)
-            warning('Trial %d fora dos limites para participante %d (execução)', t, id);
-            fprintf('  → Tempo início: %.2f s, Tempo fim: %.2f s\n', tempo_inicio, tempo_fim);
-            fprintf('  → Índice início: %s, Índice fim: %s\n', mat2str(ind_ini), mat2str(ind_fim));
-            fprintf('  → String início: %s | String fim: %s\n', cel2{t,11}, cel2{t,12});
-            continue
-        end
-
-        corte = data(:, ind_ini:ind_fim);
-        corte_tempo = tempo_eeg(ind_ini:ind_fim);
-
-        corte_struct.corte = corte;
-        corte_struct.tempo = corte_tempo;
-        corte_struct.trial = t;
-        corte_struct.id = id;
-        corte_struct.tempo_inicio = tempo_inicio;
-        corte_struct.tempo_fim = tempo_fim;
-        corte_struct.inicio_str = cel2{t,11};
-        corte_struct.fim_str = cel2{t,12};
-        corte_struct.duracao_str = cel2{t,14};
-
-        nome_saida = sprintf('EEGexecucao_ID%02d_trial%02d_%ds_%ds.mat', id, t, round(tempo_inicio), round(tempo_fim));
-        save(fullfile(out_dir2, nome_saida), 'corte_struct', '-v7.3');
-    end
-
-    fprintf('Cortes salvos para participante %d!\n', id);
+% Garante que a pasta de destino exista
+if ~exist(pasta_destino, 'dir')
+    mkdir(pasta_destino);
+    fprintf('📁 Pasta de destino criada: %s\n', pasta_destino);
 end
 
-disp('Todos os cortes de exploração e execução foram salvos para todos os participantes!');
+% 2. Lista todos os arquivos .set na pasta de origem
+arquivos_set = dir(fullfile(pasta_origem, '*.set'));
+
+if isempty(arquivos_set)
+    error('Nenhum arquivo .set encontrado na pasta de origem.');
+end
+
+fprintf('🔄 Iniciando processamento de %d arquivos...\n', length(arquivos_set));
+
+% 3. Define os canais específicos para o CAR
+canais_CAR = {'C3', 'Cz', 'C4'};
+
+% 4. Loop por todos os arquivos
+for i = 1:length(arquivos_set)
+    nome_arquivo = arquivos_set(i).name;
+    fprintf('\n➡️  Processando: %s\n', nome_arquivo);
+    
+    % Carrega o EEG
+    EEG = pop_loadset('filename', nome_arquivo, 'filepath', pasta_origem);
+    
+    % Encontra os índices dos canais C3, Cz e C4
+    indices = [];
+    for j = 1:length(canais_CAR)
+        idx = find(strcmpi({EEG.chanlocs.labels}, canais_CAR{j}));
+        if ~isempty(idx)
+            indices = [indices, idx];
+        else
+            fprintf('⚠️  Canal %s não encontrado no arquivo %s\n', canais_CAR{j}, nome_arquivo);
+        end
+    end
+    
+    if length(indices) == 3
+        % Aplica o filtro CAR apenas nos canais C3, Cz e C4
+        media_CAR = mean(EEG.data(indices, :), 1);
+        EEG.data(indices, :) = EEG.data(indices, :) - media_CAR;
+        
+        fprintf('✅ CAR aplicado em C3, Cz, C4\n');
+    else
+        fprintf('❌ Não foi possível aplicar CAR - canais não encontrados\n');
+    end
+    
+    % Adiciona histórico do processamento
+    EEG = eeg_hist(EEG, 'Filtro CAR aplicado apenas nos canais C3, Cz, C4');
+    
+    % Define novo nome do arquivo
+    [~, nome_base, ~] = fileparts(nome_arquivo);
+    nome_novo = [nome_base, '_CAR_C3CzC4.set'];
+    
+    % Salva o novo arquivo
+    pop_saveset(EEG, 'filename', nome_novo, 'filepath', pasta_destino);
+    fprintf('✅ Arquivo salvo: %s\n', fullfile(pasta_destino, nome_novo));
+end
+
+fprintf('\n🏁 Filtro CAR aplicado em C3, Cz, C4 em todos os arquivos.\n');
