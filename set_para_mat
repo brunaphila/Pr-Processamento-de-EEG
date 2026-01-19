@@ -1,0 +1,65 @@
+% Script: converter_set_para_mat.m
+
+%% 1. Parâmetros e caminhos
+
+% Caminho para a pasta onde os arquivos .set estão localizados
+caminho_origem = 'D:\Dados Bruna\dados_atuais_falta_de_espaço\ProtA\Com visão\componentes removidas_ProtA_CV';
+
+% Caminho para a pasta onde os arquivos .mat serão salvos
+caminho_destino = 'C:\Users\Bruna\Documents\IC\Dados\componentes removidas_protA_CV_mat';
+
+% Garante que a pasta de destino exista
+if ~exist(caminho_destino, 'dir')
+    mkdir(caminho_destino);
+    fprintf('Pasta de destino criada: %s\n', caminho_destino);
+end
+
+%% 2. Encontrar todos os arquivos .set na pasta de origem
+arquivos_set = dir(fullfile(caminho_origem, '*.set'));
+
+if isempty(arquivos_set)
+    fprintf('Nenhum arquivo .set encontrado na pasta de origem.\n');
+    return;
+end
+
+fprintf('Iniciando a conversão de %d arquivos .set para .mat...\n', length(arquivos_set));
+
+%% 3. Processar cada arquivo .set
+for i = 1:length(arquivos_set)
+    nome_arquivo = arquivos_set(i).name;
+    
+    % Verifica se o arquivo .fdt correspondente existe
+    nome_fdt = [nome_arquivo(1:end-4) '.fdt'];
+    if ~exist(fullfile(caminho_origem, nome_fdt), 'file')
+        fprintf('AVISO: Arquivo .fdt correspondente não encontrado para %s. Pulando.\n', nome_arquivo);
+        continue;
+    end
+    
+    fprintf('Processando arquivo %d de %d: %s\n', i, length(arquivos_set), nome_arquivo);
+    
+    try
+        % Carrega o arquivo .set, que implicitamente carrega os dados do .fdt
+        EEG = pop_loadset('filename', nome_arquivo, 'filepath', caminho_origem);
+    catch ME
+        fprintf('ERRO ao carregar o arquivo: %s\n', nome_arquivo);
+        fprintf('Mensagem de erro: %s\n', ME.message);
+        continue;
+    end
+    
+    % Extrai os campos mais importantes da estrutura EEG
+    eeg_data = EEG.data;
+    srate = EEG.srate;
+    chanlocs = EEG.chanlocs;
+    
+    % Cria o nome do arquivo .mat de saída
+    [~, nome_sem_extensao, ~] = fileparts(nome_arquivo);
+    nome_mat_saida = [nome_sem_extensao, '.mat'];
+    caminho_mat_saida = fullfile(caminho_destino, nome_mat_saida);
+    
+    % Salva as variáveis separadamente em um formato compatível com o Python
+    save(caminho_mat_saida, 'eeg_data', 'srate', 'chanlocs', '-v7');
+    
+    fprintf('Arquivo .mat salvo: %s\n', caminho_mat_saida);
+end
+
+fprintf('Conversão concluída para todos os arquivos.\n');
