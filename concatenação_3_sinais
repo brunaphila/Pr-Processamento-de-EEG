@@ -1,0 +1,63 @@
+% Script: concatenar_sinais_especificos.m
+
+% 1. Definição dos parâmetros e caminhos dos arquivos
+
+% Frequência de amostragem (importante para o EEGLAB)
+Fs = 1000; % Hz
+
+% Caminho para a pasta onde os arquivos .set estão localizados
+% ATENÇÃO: Substitua 'C:\caminho\para\seus\arquivos' pelo caminho real.
+caminho_arquivos = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo B\Sem feedback vibrotátil\filtrado_2_50';
+
+% Nomes dos três arquivos .set que você deseja concatenar
+% ATENÇÃO: Substitua 'arquivo1.set', 'arquivo2.set' e 'arquivo3.set' pelos nomes reais.
+arquivos_para_concatenar = {'ID_29_B_SF_ruidos_removidos_concatenado_corte_1_removido_filtrado_2_50.set', 'ID_29_B_SF_ruidos_removidos_concatenado_corte_2_removido_filtrado_2_50.set', 'ID_29_B_SF_ruidos_removidos_concatenado_corte_3_removido_filtrado_2_50.set'};
+
+% 2. Inicialização
+EEG_concatenado = [];
+info_arquivos = {};
+
+fprintf('Iniciando a concatenação de sinais...\n');
+
+% Carrega e concatena os arquivos
+for i = 1:length(arquivos_para_concatenar)
+    nome_arquivo = arquivos_para_concatenar{i};
+    caminho_completo = fullfile(caminho_arquivos, nome_arquivo);
+
+    if ~exist(caminho_completo, 'file')
+        fprintf('ERRO: Arquivo não encontrado: %s\n', nome_arquivo);
+        continue;
+    end
+
+    fprintf('Carregando arquivo: %s\n', nome_arquivo);
+    EEG_temp = pop_loadset('filename', nome_arquivo, 'filepath', caminho_arquivos);
+
+    if i == 1
+        % Na primeira iteração, inicializa a estrutura final com o primeiro arquivo
+        EEG = EEG_temp;
+    else
+        % Nas próximas iterações, concatena a matriz de dados
+        EEG.data = [EEG.data, EEG_temp.data];
+        
+        % Atualiza o número de pontos de dados (samples)
+        EEG.pnts = size(EEG.data, 2);
+
+        % Você pode precisar atualizar os eventos se houver, mas para uma concatenação
+        % simples, essa abordagem é suficiente.
+    end
+    
+    % Salva metadados sobre o arquivo
+    info_arquivos{i, 1} = nome_arquivo;
+    info_arquivos{i, 2} = size(EEG_temp.data, 2);
+end
+
+fprintf('Concatenação concluída!\n');
+
+% 3. Salva o arquivo final como .set
+nome_saida_set = 'ID_29_B_SF_filtrado_completo.set';
+caminho_saida = caminho_arquivos; % Salva na mesma pasta, mas você pode mudar
+
+% Use pop_saveset para salvar a estrutura EEG completa
+EEG = pop_saveset(EEG, 'filename', nome_saida_set, 'filepath', caminho_saida);
+
+fprintf('Arquivo .set salvo com sucesso: %s\n', fullfile(caminho_saida, nome_saida_set));
