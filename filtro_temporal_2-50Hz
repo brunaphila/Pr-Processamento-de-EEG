@@ -1,0 +1,51 @@
+clear all
+close all
+clc
+warning off
+
+% Caminho da pasta com os arquivos
+file_path = 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\CAR especifico';
+
+% Lista todos os arquivos .set da pasta
+files = dir(fullfile(file_path, '*.set'));
+
+% Verifica se o EEGLAB está aberto (abre se necessário)
+if ~exist('eeglab', 'file')
+    eeglab; close;
+end
+
+% Loop por todos os arquivos .set encontrados
+for k = 1:length(files)
+    fileName = files(k).name;
+    full_file_path = fullfile(file_path, fileName);
+
+    % Carrega o arquivo .set
+    EEG = pop_loadset('filename', fileName, 'filepath', file_path);
+    fprintf('\nProcessando arquivo: %s\n', fileName);
+
+    % Definir a frequência de amostragem
+    fs = EEG.srate;
+
+    % Projetar o filtro passa-banda (2–50 Hz)
+    filter_EEG = designfilt('bandpassiir', 'FilterOrder', 8, ...
+                            'PassbandFrequency1', 2, ...
+                            'PassbandFrequency2', 50, ...
+                            'PassbandRipple', 1, 'SampleRate', fs);
+
+    % Aplicar o filtro a todos os canais
+    eeg_filtrado = zeros(size(EEG.data));
+    for i = 1:size(EEG.data, 1)
+        eeg_filtrado(i, :) = filter(filter_EEG, EEG.data(i, :));
+    end
+    EEG.data = eeg_filtrado;
+
+    % Criar novo nome de arquivo com _filtrado
+    [~, name, ~] = fileparts(fileName);
+    save_file_name = [name, '_filtrado.set'];
+
+    % Salvar o novo arquivo
+    pop_saveset(EEG, 'filename', save_file_name, 'filepath', 'C:\Users\Bruna\Documents\IC\Dados\Protocolo_C\filtrado especifico');
+    fprintf('Arquivo salvo como: %s\n', save_file_name);
+end
+
+disp('Todos os arquivos foram processados e salvos com sucesso!');
