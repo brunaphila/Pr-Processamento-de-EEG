@@ -42,7 +42,7 @@ O Protocolo C utiliza horários (início/fim) de cada trial para localizar trech
 
 ---
 
-## 3) Cortes do Protocolo C (segmentação por trial)
+## 3a) Cortes do Protocolo C (segmentação por trial)
 
 ### Script
 - `cortes_protC.m`
@@ -54,6 +54,33 @@ Gera cortes separados para:
 - **Execução** (18 trials)
 
 **Saída:** arquivos `.mat` por trial, organizados por pasta do voluntário (corte + metadados do trial).
+
+## 3b) Cortes do Protocolo B (CF)
+
+### Scripts
+- `duracao_trials_B_CF.m`
+- `cortes_manuais_protB_CF.m`
+
+### O que essa etapa faz
+O Protocolo B (CF) foi segmentado conforme os intervalos definidos no protocolo. Como os trials exigiam alinhamento manual do instante inicial (`t3`) e as durações variavam, o processo foi dividido em duas partes:
+
+1) **Cálculo das durações reais (por trial)**
+- `duracao_trials_B_CF.m` carrega `ProtB_CF_corrigido_IDs.mat` e calcula, para IDs 26 e 33 (reps 1..3, até 9 trials), as durações:
+  - `dur_estim_s = t4 - t3`
+  - `dur_exec_s  = t5 - t4`
+- Salva a tabela `DurCF` em `duracoes_ProtB_CF_ID26_33.mat` e `.csv`.
+
+2) **Cortes manuais usando `t3` + `DurCF`**
+- `cortes_manuais_protB_CF.m` usa um plano manual de inícios `t3` (em segundos, relativo ao `.set`) e a tabela `DurCF` para calcular `t4` e `t5`.
+- Gera dois segmentos por trial:
+  - **ESTIM:** `t3..t4`
+  - **EXEC:** `t4..t5`
+- Salva:
+  - `.mat` com `eeg_data` e `corte_struct`
+  - `.set` “minimalista” (via `pop_importdata`)
+- Organiza as saídas em `segments_IDxx_ProtB_CF_MANUAL`, com subpastas:
+  - `cortes_estim_IDxx_rep#_MANUAL`
+  - `cortes_exec_IDxx_rep#_MANUAL`
 
 ---
 
